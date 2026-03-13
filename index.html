@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Allyssea — Transaction Log</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --bg-deep: #0a0806;
@@ -20,9 +21,7 @@
     --text-secondary: #a89878;
     --text-dim: #6a5a44;
   }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
+  * { margin:0; padding:0; box-sizing:border-box; }
   body {
     background-color: var(--bg-deep);
     color: var(--text-primary);
@@ -73,12 +72,54 @@
     letter-spacing: 1px;
   }
 
-  .container {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 32px 24px;
-  }
+  .container { max-width: 860px; margin: 0 auto; padding: 32px 24px; }
 
+  /* ADMIN LOGIN */
+  .admin-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .admin-status {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .admin-status.logged-in { color: #6abf8a; }
+  .admin-input {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 7px 12px;
+    font-family: 'Crimson Text', serif;
+    font-size: 14px;
+    outline: none;
+    width: 160px;
+    transition: border-color 0.2s;
+  }
+  .admin-input:focus { border-color: var(--gold-dim); }
+  .btn-sm {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    cursor: pointer;
+    border: 1px solid var(--gold-dim);
+    background: rgba(201,168,76,0.08);
+    color: var(--gold);
+    transition: all 0.2s;
+  }
+  .btn-sm:hover { background: rgba(201,168,76,0.18); border-color: var(--gold); color: var(--gold-light); }
+  .btn-sm.logout { border-color: #6a2a2a; color: #e07070; background: rgba(139,42,42,0.1); }
+  .btn-sm.logout:hover { background: rgba(139,42,42,0.25); border-color: #c0392b; color: #ff9090; }
+
+  /* STATS */
   .stat-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -99,24 +140,14 @@
     top: 0; left: 0; right: 0; height: 2px;
     background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
   }
-  .stat-num {
-    font-family: 'Cinzel', serif;
-    font-size: 22px;
-    font-weight: 700;
-    margin-bottom: 4px;
-  }
-  .stat-label {
-    font-family: 'Cinzel', serif;
-    font-size: 8px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-dim);
-  }
+  .stat-num { font-family: 'Cinzel', serif; font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .stat-label { font-family: 'Cinzel', serif; font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); }
   .s-total .stat-num { color: var(--blue-bright); }
   .s-in    .stat-num { color: #6abf8a; }
   .s-out   .stat-num { color: #c07070; }
   .s-vela  .stat-num { color: var(--gold-light); }
 
+  /* FORM */
   .form-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -141,28 +172,13 @@
     align-items: center;
     gap: 10px;
   }
-  .form-title::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, var(--border), transparent);
-  }
+  .form-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border), transparent); }
 
-  .form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .field { display: flex; flex-direction: column; gap: 6px; }
   .field.span2 { grid-column: span 2; }
 
-  label {
-    font-family: 'Cinzel', serif;
-    font-size: 10px;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-dim);
-  }
+  label { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); }
 
   input, select {
     background: var(--bg-input);
@@ -175,10 +191,7 @@
     transition: border-color 0.2s, box-shadow 0.2s;
     width: 100%;
   }
-  input:focus, select:focus {
-    border-color: var(--gold-dim);
-    box-shadow: 0 0 0 2px rgba(122,92,46,0.15);
-  }
+  input:focus, select:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 2px rgba(122,92,46,0.15); }
   select option { background: var(--bg-card); }
 
   .btn {
@@ -194,57 +207,24 @@
     transition: all 0.2s;
     margin-top: 18px;
   }
-  .btn:hover {
-    background: linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.1));
-    border-color: var(--gold);
-    box-shadow: 0 0 20px rgba(201,168,76,0.15);
-    color: var(--gold-light);
-  }
+  .btn:hover { background: linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.1)); border-color: var(--gold); box-shadow: 0 0 20px rgba(201,168,76,0.15); color: var(--gold-light); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
   .btn-danger {
-    border-color: #6a2a2a;
-    color: #e07070;
-    background: rgba(139,42,42,0.1);
-    font-size: 10px;
-    padding: 6px 14px;
-    margin-top: 0;
-    letter-spacing: 1px;
+    border-color: #6a2a2a; color: #e07070; background: rgba(139,42,42,0.1);
+    font-size: 10px; padding: 6px 14px; margin-top: 0; letter-spacing: 1px;
+    font-family: 'Cinzel', serif; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
   }
-  .btn-danger:hover {
-    background: rgba(139,42,42,0.25);
-    border-color: #c0392b;
-    color: #ff9090;
-  }
+  .btn-danger:hover { background: rgba(139,42,42,0.25); border-color: #c0392b; color: #ff9090; }
 
-  .filter-row {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-  }
-  .filter-row input, .filter-row select {
-    flex: 1;
-    min-width: 140px;
-    font-size: 13px;
-    padding: 8px 10px;
-    margin-top: 0;
-  }
+  /* FILTER */
+  .filter-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-row input, .filter-row select { flex: 1; min-width: 140px; font-size: 13px; padding: 8px 10px; margin-top: 0; }
+  .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .log-count { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
 
-  .log-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 14px;
-  }
-  .log-count {
-    font-family: 'Cinzel', serif;
-    font-size: 10px;
-    letter-spacing: 2px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-  }
-
+  /* LOG */
   .log-list { display: flex; flex-direction: column; gap: 8px; }
-
   .log-entry {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -257,78 +237,50 @@
     animation: fadeIn 0.25s ease;
   }
   .log-entry:hover { border-color: var(--border-glow); }
-
   @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
 
   .log-icon {
-    width: 40px; height: 40px;
-    border-radius: 50%;
+    width: 40px; height: 40px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 17px;
-    border: 1px solid;
-    flex-shrink: 0;
-    font-family: 'Cinzel', serif;
-    font-weight: 700;
+    font-size: 17px; border: 1px solid; flex-shrink: 0;
+    font-family: 'Cinzel', serif; font-weight: 700;
   }
   .icon-in       { background: rgba(42,90,58,0.3);  border-color: #6abf8a; color: #6abf8a; }
   .icon-out      { background: rgba(139,42,42,0.3); border-color: #c07070; color: #c07070; }
   .icon-transfer { background: rgba(30,58,90,0.3);  border-color: var(--blue-bright); color: var(--blue-bright); }
 
-  .log-top {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 3px;
-    flex-wrap: wrap;
-  }
-  .log-name  { font-family: 'Cinzel', serif; font-size: 13px; color: var(--gold-light); font-weight: 600; }
-  .log-char  { font-size: 13px; color: var(--text-secondary); font-style: italic; }
-
-  .log-badge {
-    font-family: 'Cinzel', serif;
-    font-size: 9px;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 2px 8px;
-    border: 1px solid;
-    border-radius: 2px;
-  }
-  .badge-in   { color: #6abf8a; border-color: #2a5a3a; background: rgba(42,90,58,0.2); }
-  .badge-out  { color: #c07070; border-color: #6a2a2a; background: rgba(139,42,42,0.2); }
-  .badge-tr   { color: var(--blue-bright); border-color: #1e3a5a; background: rgba(30,58,90,0.2); }
+  .log-top { display: flex; align-items: center; gap: 10px; margin-bottom: 3px; flex-wrap: wrap; }
+  .log-name { font-family: 'Cinzel', serif; font-size: 13px; color: var(--gold-light); font-weight: 600; }
+  .log-char { font-size: 13px; color: var(--text-secondary); font-style: italic; }
+  .log-badge { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; padding: 2px 8px; border: 1px solid; border-radius: 2px; }
+  .badge-in  { color: #6abf8a; border-color: #2a5a3a; background: rgba(42,90,58,0.2); }
+  .badge-out { color: #c07070; border-color: #6a2a2a; background: rgba(139,42,42,0.2); }
+  .badge-tr  { color: var(--blue-bright); border-color: #1e3a5a; background: rgba(30,58,90,0.2); }
 
   .log-amount { font-family: 'Cinzel', serif; font-size: 15px; font-weight: 600; }
-  .amt-in     { color: #6abf8a; }
-  .amt-out    { color: #c07070; }
-  .amt-tr     { color: var(--blue-bright); }
+  .amt-in  { color: #6abf8a; }
+  .amt-out { color: #c07070; }
+  .amt-tr  { color: var(--blue-bright); }
 
-  .log-note   { font-size: 13px; color: var(--text-dim); font-style: italic; }
-  .log-time   { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
-
-  .log-right  { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .log-note { font-size: 13px; color: var(--text-dim); font-style: italic; }
+  .log-time { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .log-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 
   .empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); }
   .empty-state .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
   .empty-state p { font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; }
 
+  .loading { text-align: center; padding: 40px; color: var(--text-dim); font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; }
+
   .toast {
-    position: fixed;
-    bottom: 28px; right: 28px;
-    background: var(--bg-card);
-    border: 1px solid var(--gold-dim);
-    border-left: 3px solid var(--gold);
-    padding: 12px 20px;
-    font-family: 'Cinzel', serif;
-    font-size: 11px;
-    letter-spacing: 1px;
-    color: var(--gold-light);
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all 0.3s;
-    pointer-events: none;
-    z-index: 999;
+    position: fixed; bottom: 28px; right: 28px;
+    background: var(--bg-card); border: 1px solid var(--gold-dim); border-left: 3px solid var(--gold);
+    padding: 12px 20px; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px;
+    color: var(--gold-light); opacity: 0; transform: translateY(10px);
+    transition: all 0.3s; pointer-events: none; z-index: 999;
   }
   .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { border-left-color: #c07070; color: #e07070; }
 
   @media (max-width: 600px) {
     .form-grid { grid-template-columns: 1fr; }
@@ -348,25 +300,25 @@
 
 <div class="container">
 
-  <div class="stat-row">
-    <div class="stat-card s-total">
-      <div class="stat-num" id="s-total">0</div>
-      <div class="stat-label">Total Entri</div>
+  <!-- ADMIN BAR -->
+  <div class="admin-bar">
+    <span class="admin-status" id="admin-status">● Member Mode</span>
+    <div id="admin-login-form" style="display:flex;gap:8px;align-items:center;">
+      <input type="password" class="admin-input" id="admin-pass" placeholder="Password Observer...">
+      <button class="btn-sm" onclick="loginAdmin()">Masuk</button>
     </div>
-    <div class="stat-card s-in">
-      <div class="stat-num" id="s-in">0</div>
-      <div class="stat-label">Pemasukan</div>
-    </div>
-    <div class="stat-card s-out">
-      <div class="stat-num" id="s-out">0</div>
-      <div class="stat-label">Pengeluaran</div>
-    </div>
-    <div class="stat-card s-vela">
-      <div class="stat-num" id="s-vela">0</div>
-      <div class="stat-label">Total Vela Masuk</div>
-    </div>
+    <button class="btn-sm logout" id="btn-logout" style="display:none;" onclick="logoutAdmin()">Keluar</button>
   </div>
 
+  <!-- STATS -->
+  <div class="stat-row">
+    <div class="stat-card s-total"><div class="stat-num" id="s-total">—</div><div class="stat-label">Total Entri</div></div>
+    <div class="stat-card s-in">   <div class="stat-num" id="s-in">—</div>   <div class="stat-label">Pemasukan</div></div>
+    <div class="stat-card s-out">  <div class="stat-num" id="s-out">—</div>  <div class="stat-label">Pengeluaran</div></div>
+    <div class="stat-card s-vela"> <div class="stat-num" id="s-vela">—</div> <div class="stat-label">Total Vela Masuk</div></div>
+  </div>
+
+  <!-- FORM -->
   <div class="form-card">
     <div class="form-title">💰 Catat Transaksi</div>
     <div class="form-grid">
@@ -397,9 +349,10 @@
         <input type="text" id="tr-note" placeholder="Sumber / tujuan transaksi...">
       </div>
     </div>
-    <button class="btn" onclick="submitLog()">✦ Catat Transaksi</button>
+    <button class="btn" id="btn-submit" onclick="submitLog()">✦ Catat Transaksi</button>
   </div>
 
+  <!-- FILTER -->
   <div class="filter-row">
     <input type="text" id="filter-search" placeholder="Cari member / karakter..." oninput="renderLog()">
     <select id="filter-type" onchange="renderLog()">
@@ -412,58 +365,126 @@
   </div>
 
   <div class="log-header">
-    <span class="log-count" id="log-count-label">0 entri</span>
+    <span class="log-count" id="log-count-label">Memuat data...</span>
   </div>
 
-  <div class="log-list" id="log-list"></div>
+  <div class="log-list" id="log-list">
+    <div class="loading">Menghubungkan ke database...</div>
+  </div>
 
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-  let logs = JSON.parse(localStorage.getItem('allyssea_tr_v2') || '[]');
+  // ── SUPABASE INIT ──
+  const { createClient } = supabase;
+  const db = createClient(
+    'https://zcdbnsfksudwxkncqdtk.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjZGJuc2Zrc3Vkd3hrbmNxZHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzOTkxMTYsImV4cCI6MjA4ODk3NTExNn0.dvF4keB-_LM6pKqMPRtEsqVSJcM6MXELcAqDfkF6gcs'
+  );
 
-  function isIn(j) { return j === 'Pemasukan' || j === 'Transfer Masuk'; }
+  // ── PASSWORD OBSERVER/ADMIN ──
+  const ADMIN_PASSWORD = 'observer2024';
+
+  let logs = [];
+  let isAdmin = false;
+
+  // ── ADMIN AUTH ──
+  function loginAdmin() {
+    const pass = document.getElementById('admin-pass').value;
+    if (pass === ADMIN_PASSWORD) {
+      isAdmin = true;
+      document.getElementById('admin-status').textContent = '● Observer Mode';
+      document.getElementById('admin-status').classList.add('logged-in');
+      document.getElementById('admin-login-form').style.display = 'none';
+      document.getElementById('btn-logout').style.display = 'inline-block';
+      renderLog();
+      showToast('Selamat datang, Observer.');
+    } else {
+      showToast('Password salah.', true);
+    }
+  }
+
+  function logoutAdmin() {
+    isAdmin = false;
+    document.getElementById('admin-status').textContent = '● Member Mode';
+    document.getElementById('admin-status').classList.remove('logged-in');
+    document.getElementById('admin-login-form').style.display = 'flex';
+    document.getElementById('btn-logout').style.display = 'none';
+    document.getElementById('admin-pass').value = '';
+    renderLog();
+  }
+
+  // ── HELPERS ──
+  function isIn(j)  { return j === 'Pemasukan' || j === 'Transfer Masuk'; }
   function isOut(j) { return j === 'Pengeluaran' || j === 'Transfer Keluar'; }
-
   function iconClass(j)  { return isIn(j) ? 'icon-in' : isOut(j) ? 'icon-out' : 'icon-transfer'; }
   function amtClass(j)   { return isIn(j) ? 'amt-in'  : isOut(j) ? 'amt-out'  : 'amt-tr'; }
   function badgeClass(j) { return isIn(j) ? 'badge-in': isOut(j) ? 'badge-out': 'badge-tr'; }
   function iconChar(j)   { return isIn(j) ? '↑' : isOut(j) ? '↓' : '⇄'; }
-
-  function getVal(id) { return (document.getElementById(id)?.value || '').trim(); }
+  function getVal(id)    { return (document.getElementById(id)?.value || '').trim(); }
   function clearFields(...ids) { ids.forEach(id => { const el = document.getElementById(id); if(el) el.value=''; }); }
 
-  function submitLog() {
+  // ── FETCH LOGS ──
+  async function fetchLogs() {
+    const { data, error } = await db
+      .from('transactions')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) { showToast('Gagal memuat data.', true); return; }
+    logs = data || [];
+    renderLog();
+  }
+
+  // ── SUBMIT ──
+  async function submitLog() {
     const member = getVal('tr-member'), char = getVal('tr-char'),
           jenis  = getVal('tr-type'),   amount = getVal('tr-amount'),
           note   = getVal('tr-note');
 
-    if (!member || !char || !jenis || !amount) { showToast('Lengkapi semua data transaksi.'); return; }
+    if (!member || !char || !jenis || !amount) { showToast('Lengkapi semua data transaksi.', true); return; }
 
-    logs.unshift({ id: Date.now(), member, char, jenis, amount: Number(amount), note: note||'-', timestamp: new Date().toISOString() });
-    localStorage.setItem('allyssea_tr_v2', JSON.stringify(logs));
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+
+    const { error } = await db.from('transactions').insert([{
+      member, char, jenis,
+      amount: Number(amount),
+      note: note || '-'
+    }]);
+
+    btn.disabled = false;
+    btn.textContent = '✦ Catat Transaksi';
+
+    if (error) { showToast('Gagal menyimpan transaksi.', true); return; }
+
     clearFields('tr-member','tr-char','tr-type','tr-amount','tr-note');
-    renderLog();
     showToast('Transaksi berhasil dicatat.');
+    fetchLogs();
   }
 
-  function deleteLog(id) {
-    logs = logs.filter(l => l.id !== id);
-    localStorage.setItem('allyssea_tr_v2', JSON.stringify(logs));
-    renderLog();
+  // ── DELETE ──
+  async function deleteLog(id) {
+    if (!isAdmin) return;
+    const { error } = await db.from('transactions').delete().eq('id', id);
+    if (error) { showToast('Gagal menghapus.', true); return; }
+    showToast('Entri dihapus.');
+    fetchLogs();
   }
 
+  // ── RENDER ──
   function renderLog() {
     const search = getVal('filter-search').toLowerCase();
     const tf = getVal('filter-type');
+
     const filtered = logs.filter(l =>
       (!tf || l.jenis === tf) &&
       (!search || l.member.toLowerCase().includes(search) || l.char.toLowerCase().includes(search))
     );
 
-    const totalIn = logs.filter(l => isIn(l.jenis)).reduce((s,l) => s+l.amount, 0);
+    const totalIn = logs.filter(l => isIn(l.jenis)).reduce((s,l) => s + l.amount, 0);
     document.getElementById('s-total').textContent = logs.length;
     document.getElementById('s-in').textContent    = logs.filter(l => isIn(l.jenis)).length;
     document.getElementById('s-out').textContent   = logs.filter(l => isOut(l.jenis)).length;
@@ -471,15 +492,16 @@
     document.getElementById('log-count-label').textContent = filtered.length + ' entri';
 
     const c = document.getElementById('log-list');
+
     if (!filtered.length) {
       c.innerHTML = `<div class="empty-state"><div class="empty-icon">💰</div><p>Belum ada transaksi tercatat</p></div>`;
       return;
     }
 
     c.innerHTML = filtered.map(l => {
-      const d = new Date(l.timestamp);
-      const ds = d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
-      const ts = d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+      const d = new Date(l.created_at);
+      const ds = d.toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'});
+      const ts = d.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
       return `
         <div class="log-entry">
           <div class="log-icon ${iconClass(l.jenis)}">${iconChar(l.jenis)}</div>
@@ -489,24 +511,40 @@
               <span class="log-char">${l.char}</span>
               <span class="log-badge ${badgeClass(l.jenis)}">${l.jenis}</span>
             </div>
-            <div class="log-amount ${amtClass(l.jenis)}">${l.amount.toLocaleString('id')} Vela</div>
-            ${l.note !== '-' ? `<div class="log-note">${l.note}</div>` : ''}
+            <div class="log-amount ${amtClass(l.jenis)}">${Number(l.amount).toLocaleString('id')} Vela</div>
+            ${l.note && l.note !== '-' ? `<div class="log-note">${l.note}</div>` : ''}
             <div class="log-time">${ds} · ${ts}</div>
           </div>
           <div class="log-right">
-            <button class="btn btn-danger" onclick="deleteLog(${l.id})">Hapus</button>
+            ${isAdmin ? `<button class="btn-danger" onclick="deleteLog(${l.id})">Hapus</button>` : ''}
           </div>
         </div>`;
     }).join('');
   }
 
-  function showToast(msg) {
+  // ── REALTIME ──
+  db.channel('transactions')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+      fetchLogs();
+    })
+    .subscribe();
+
+  // ── TOAST ──
+  function showToast(msg, isError = false) {
     const t = document.getElementById('toast');
-    t.textContent = msg; t.classList.add('show');
+    t.textContent = msg;
+    t.className = 'toast' + (isError ? ' error' : '');
+    t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2500);
   }
 
-  renderLog();
+  // ── ENTER KEY ──
+  document.getElementById('admin-pass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') loginAdmin();
+  });
+
+  // ── INIT ──
+  fetchLogs();
 </script>
 </body>
 </html>
