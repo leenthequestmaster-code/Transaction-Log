@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Allyssea — Transaction Log</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg-deep: #0a0806;
+    --bg-card: #1a1510;
+    --bg-input: #141008;
+    --border: #3a2e1e;
+    --border-glow: #7a5c2e;
+    --gold: #c9a84c;
+    --gold-light: #e8cc7a;
+    --gold-dim: #7a6030;
+    --blue-bright: #4a7aaa;
+    --text-primary: #e8dcc8;
+    --text-secondary: #a89878;
+    --text-dim: #6a5a44;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background-color: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: 'Crimson Text', Georgia, serif;
+    font-size: 16px;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(122,92,46,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(30,58,90,0.06) 0%, transparent 50%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%233a2e1e' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* ── LOGIN SCREEN ── */
+  #login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .login-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 380px;
+    position: relative;
+  }
+  .login-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .login-ornament {
+    text-align: center;
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .login-title {
+    text-align: center;
+    font-family: 'Cinzel', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gold-light);
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+    text-shadow: 0 0 30px rgba(201,168,76,0.3);
+  }
+  .login-sub {
+    text-align: center;
+    font-style: italic;
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-bottom: 28px;
+  }
+  .login-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .login-field label { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); }
+  .login-field input {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 10px 14px;
+    font-family: 'Crimson Text', serif;
+    font-size: 15px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  .login-field input:focus { border-color: var(--gold-dim); }
+  .login-btn {
+    width: 100%;
+    margin-top: 8px;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 12px;
+    cursor: pointer;
+    border: 1px solid var(--gold-dim);
+    background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05));
+    color: var(--gold);
+    transition: all 0.2s;
+  }
+  .login-btn:hover { background: linear-gradient(135deg, rgba(201,168,76,0.25), rgba(201,168,76,0.1)); border-color: var(--gold); color: var(--gold-light); box-shadow: 0 0 20px rgba(201,168,76,0.15); }
+  .login-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .login-error { color: #e07070; font-size: 13px; text-align: center; margin-top: 10px; font-style: italic; min-height: 20px; }
+
+  /* ── MAIN APP ── */
+  #app-screen { display: none; }
+
+  .header {
+    text-align: center;
+    padding: 40px 24px 28px;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 50%; transform: translateX(-50%);
+    width: 200px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  .header-ornament { font-family: 'Cinzel', serif; color: var(--gold-dim); font-size: 11px; letter-spacing: 6px; text-transform: uppercase; margin-bottom: 10px; opacity: 0.7; }
+  .header h1 { font-family: 'Cinzel', serif; font-size: 28px; font-weight: 700; color: var(--gold-light); letter-spacing: 3px; text-shadow: 0 0 40px rgba(201,168,76,0.3); margin-bottom: 4px; }
+  .header-sub { font-style: italic; color: var(--text-secondary); font-size: 14px; }
+
+  .container { max-width: 860px; margin: 0 auto; padding: 28px 24px; }
+
+  /* USER BAR */
+  .user-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 10px 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .user-info { display: flex; align-items: center; gap: 10px; }
+  .user-role {
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border: 1px solid;
+    border-radius: 2px;
+  }
+  .role-observer { color: #6abf8a; border-color: #2a5a3a; background: rgba(42,90,58,0.2); }
+  .role-member   { color: var(--gold); border-color: var(--gold-dim); background: rgba(201,168,76,0.08); }
+  .user-name { font-family: 'Cinzel', serif; font-size: 13px; color: var(--text-primary); }
+  .user-char { font-size: 13px; color: var(--text-secondary); font-style: italic; }
+  .btn-logout {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    padding: 7px 14px; cursor: pointer; border: 1px solid #6a2a2a;
+    background: rgba(139,42,42,0.1); color: #e07070; transition: all 0.2s;
+  }
+  .btn-logout:hover { background: rgba(139,42,42,0.25); border-color: #c0392b; color: #ff9090; }
+
+  /* STATS */
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 24px; }
+  .stat-card { background: var(--bg-card); border: 1px solid var(--border); padding: 14px; text-align: center; position: relative; overflow: hidden; }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold-dim), transparent); }
+  .stat-num { font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .stat-label { font-family: 'Cinzel', serif; font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); }
+  .s-total .stat-num { color: var(--blue-bright); }
+  .s-in    .stat-num { color: #6abf8a; }
+  .s-out   .stat-num { color: #c07070; }
+  .s-vela  .stat-num { color: var(--gold-light); }
+
+  /* FORM */
+  .form-card { background: var(--bg-card); border: 1px solid var(--border); padding: 24px; margin-bottom: 24px; position: relative; }
+  .form-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold-dim), transparent); }
+  .form-title { font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+  .form-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border), transparent); }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.span2 { grid-column: span 2; }
+
+  label { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); }
+
+  input, select {
+    background: var(--bg-input); border: 1px solid var(--border); color: var(--text-primary);
+    padding: 9px 12px; font-family: 'Crimson Text', serif; font-size: 15px;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s; width: 100%;
+  }
+  input:focus, select:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 2px rgba(122,92,46,0.15); }
+  input:read-only { opacity: 0.6; cursor: not-allowed; }
+  select option { background: var(--bg-card); }
+
+  .btn { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; padding: 11px 28px; cursor: pointer; border: 1px solid var(--gold-dim); background: linear-gradient(135deg, rgba(201,168,76,0.1), rgba(201,168,76,0.05)); color: var(--gold); transition: all 0.2s; margin-top: 16px; }
+  .btn:hover { background: linear-gradient(135deg, rgba(201,168,76,0.2), rgba(201,168,76,0.1)); border-color: var(--gold); box-shadow: 0 0 20px rgba(201,168,76,0.15); color: var(--gold-light); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-danger { border: 1px solid #6a2a2a; color: #e07070; background: rgba(139,42,42,0.1); font-size: 10px; padding: 6px 14px; margin-top: 0; letter-spacing: 1px; font-family: 'Cinzel', serif; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+  .btn-danger:hover { background: rgba(139,42,42,0.25); border-color: #c0392b; color: #ff9090; }
+
+  /* FILTER */
+  .filter-row { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filter-row input, .filter-row select { flex: 1; min-width: 140px; font-size: 13px; padding: 8px 10px; margin-top: 0; }
+  .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .log-count { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; color: var(--text-dim); text-transform: uppercase; }
+
+  /* LOG */
+  .log-list { display: flex; flex-direction: column; gap: 8px; }
+  .log-entry { background: var(--bg-card); border: 1px solid var(--border); padding: 14px 16px; display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center; transition: border-color 0.2s; animation: fadeIn 0.25s ease; }
+  .log-entry:hover { border-color: var(--border-glow); }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+
+  .log-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 17px; border: 1px solid; flex-shrink: 0; font-family: 'Cinzel', serif; font-weight: 700; }
+  .icon-in       { background: rgba(42,90,58,0.3);  border-color: #6abf8a; color: #6abf8a; }
+  .icon-out      { background: rgba(139,42,42,0.3); border-color: #c07070; color: #c07070; }
+  .icon-transfer { background: rgba(30,58,90,0.3);  border-color: var(--blue-bright); color: var(--blue-bright); }
+
+  .log-top { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; flex-wrap: wrap; }
+  .log-name  { font-family: 'Cinzel', serif; font-size: 13px; color: var(--gold-light); font-weight: 600; }
+  .log-char  { font-size: 13px; color: var(--text-secondary); font-style: italic; }
+  .log-badge { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; padding: 2px 8px; border: 1px solid; border-radius: 2px; }
+  .badge-in  { color: #6abf8a; border-color: #2a5a3a; background: rgba(42,90,58,0.2); }
+  .badge-out { color: #c07070; border-color: #6a2a2a; background: rgba(139,42,42,0.2); }
+  .badge-tr  { color: var(--blue-bright); border-color: #1e3a5a; background: rgba(30,58,90,0.2); }
+
+  .log-amount { font-family: 'Cinzel', serif; font-size: 15px; font-weight: 600; }
+  .amt-in  { color: #6abf8a; }
+  .amt-out { color: #c07070; }
+  .amt-tr  { color: var(--blue-bright); }
+
+  .log-note { font-size: 13px; color: var(--text-dim); font-style: italic; }
+  .log-time { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .log-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-dim); }
+  .empty-state .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-state p { font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; }
+
+  .loading { text-align: center; padding: 40px; color: var(--text-dim); font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; }
+
+  .toast { position: fixed; bottom: 28px; right: 28px; background: var(--bg-card); border: 1px solid var(--gold-dim); border-left: 3px solid var(--gold); padding: 12px 20px; font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 1px; color: var(--gold-light); opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { border-left-color: #c07070; color: #e07070; }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .field.span2 { grid-column: span 1; }
+    .stat-row { grid-template-columns: 1fr 1fr; }
+    .log-entry { grid-template-columns: 44px 1fr; }
+    .log-right { grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-top: 4px; }
+    .login-box { padding: 28px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN SCREEN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-ornament">✦ Allyssea Roleplay Community ✦</div>
+    <div class="login-title">Transaction Log</div>
+    <div class="login-sub">Masuk untuk mencatat transaksi</div>
+
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="login-username" placeholder="Username kamu...">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="Password kamu...">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">✦ Masuk</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ── APP SCREEN ── -->
+<div id="app-screen">
+  <div class="header">
+    <div class="header-ornament">✦ Allyssea Roleplay Community ✦</div>
+    <h1>Transaction Log</h1>
+    <div class="header-sub">Pencatatan Keuangan Karakter — Benua Allyssea</div>
+  </div>
+
+  <div class="container">
+
+    <!-- USER BAR -->
+    <div class="user-bar">
+      <div class="user-info">
+        <span class="user-role" id="ui-role">Member</span>
+        <span class="user-name" id="ui-name">—</span>
+        <span class="user-char" id="ui-char">—</span>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Keluar</button>
+    </div>
+
+    <!-- STATS -->
+    <div class="stat-row">
+      <div class="stat-card s-total"><div class="stat-num" id="s-total">—</div><div class="stat-label">Total Entri</div></div>
+      <div class="stat-card s-in">   <div class="stat-num" id="s-in">—</div>   <div class="stat-label">Pemasukan</div></div>
+      <div class="stat-card s-out">  <div class="stat-num" id="s-out">—</div>  <div class="stat-label">Pengeluaran</div></div>
+      <div class="stat-card s-vela"> <div class="stat-num" id="s-vela">—</div> <div class="stat-label">Total Vela Masuk</div></div>
+    </div>
+
+    <!-- FORM -->
+    <div class="form-card">
+      <div class="form-title">💰 Catat Transaksi</div>
+      <div class="form-grid">
+        <div class="field">
+          <label>Nama Member</label>
+          <input type="text" id="tr-member" readonly>
+        </div>
+        <div class="field">
+          <label>Nama Karakter</label>
+          <input type="text" id="tr-char" readonly>
+        </div>
+        <div class="field">
+          <label>Jenis Transaksi</label>
+          <select id="tr-type">
+            <option value="">— Pilih Jenis —</option>
+            <option value="Pemasukan">Pemasukan</option>
+            <option value="Pengeluaran">Pengeluaran</option>
+            <option value="Transfer Masuk">Transfer Masuk</option>
+            <option value="Transfer Keluar">Transfer Keluar</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Jumlah (Vela)</label>
+          <input type="number" id="tr-amount" placeholder="0" min="0">
+        </div>
+        <div class="field span2">
+          <label>Keterangan</label>
+          <input type="text" id="tr-note" placeholder="Sumber / tujuan transaksi...">
+        </div>
+      </div>
+      <button class="btn" id="btn-submit" onclick="submitLog()">✦ Catat Transaksi</button>
+    </div>
+
+    <!-- FILTER -->
+    <div class="filter-row">
+      <input type="text" id="filter-search" placeholder="Cari member / karakter..." oninput="renderLog()">
+      <select id="filter-type" onchange="renderLog()">
+        <option value="">Semua Jenis</option>
+        <option value="Pemasukan">Pemasukan</option>
+        <option value="Pengeluaran">Pengeluaran</option>
+        <option value="Transfer Masuk">Transfer Masuk</option>
+        <option value="Transfer Keluar">Transfer Keluar</option>
+      </select>
+    </div>
+
+    <div class="log-header">
+      <span class="log-count" id="log-count-label">Memuat data...</span>
+    </div>
+
+    <div class="log-list" id="log-list">
+      <div class="loading">Menghubungkan ke database...</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const { createClient } = supabase;
+  const db = createClient(
+    'https://zcdbnsfksudwxkncqdtk.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjZGJuc2Zrc3Vkd3hrbmNxZHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMzOTkxMTYsImV4cCI6MjA4ODk3NTExNn0.dvF4keB-_LM6pKqMPRtEsqVSJcM6MXELcAqDfkF6gcs'
+  );
+
+  let logs = [];
+  let currentUser = null;
+
+  // ── LOGIN ──
+  async function doLogin() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    const errEl = document.getElementById('login-error');
+    const btn = document.getElementById('login-btn');
+
+    if (!username || !password) { errEl.textContent = 'Isi username dan password.'; return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Memeriksa...';
+    errEl.textContent = '';
+
+    const { data, error } = await db
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .eq('password', password)
+      .single();
+
+    btn.disabled = false;
+    btn.textContent = '✦ Masuk';
+
+    if (error) {
+      errEl.textContent = 'Error: ' + error.message + ' (' + error.code + ')';
+      return;
+    }
+
+    if (!data) {
+      errEl.textContent = 'Username atau password salah.';
+      return;
+    }
+
+    currentUser = data;
+    showApp();
+  }
+
+  function showApp() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-screen').style.display = 'block';
+
+    const isObserver = currentUser.role === 'observer';
+    document.getElementById('ui-name').textContent = currentUser.username;
+    document.getElementById('ui-char').textContent = currentUser.character_name;
+    document.getElementById('ui-role').textContent = isObserver ? 'Observer' : 'Member';
+    document.getElementById('ui-role').className = 'user-role ' + (isObserver ? 'role-observer' : 'role-member');
+
+    document.getElementById('tr-member').value = currentUser.username;
+    document.getElementById('tr-char').value = currentUser.character_name;
+
+    fetchLogs();
+  }
+
+  function doLogout() {
+    currentUser = null;
+    logs = [];
+    document.getElementById('login-username').value = '';
+    document.getElementById('login-password').value = '';
+    document.getElementById('login-error').textContent = '';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app-screen').style.display = 'none';
+  }
+
+  // ── HELPERS ──
+  function isIn(j)  { return j === 'Pemasukan' || j === 'Transfer Masuk'; }
+  function isOut(j) { return j === 'Pengeluaran' || j === 'Transfer Keluar'; }
+  function iconClass(j)  { return isIn(j) ? 'icon-in' : isOut(j) ? 'icon-out' : 'icon-transfer'; }
+  function amtClass(j)   { return isIn(j) ? 'amt-in'  : isOut(j) ? 'amt-out'  : 'amt-tr'; }
+  function badgeClass(j) { return isIn(j) ? 'badge-in': isOut(j) ? 'badge-out': 'badge-tr'; }
+  function iconChar(j)   { return isIn(j) ? '↑' : isOut(j) ? '↓' : '⇄'; }
+  function getVal(id)    { return (document.getElementById(id)?.value || '').trim(); }
+
+  // ── FETCH ──
+  async function fetchLogs() {
+    const { data, error } = await db
+      .from('transactions')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) { showToast('Gagal memuat data.', true); return; }
+    logs = data || [];
+    renderLog();
+  }
+
+  // ── SUBMIT ──
+  async function submitLog() {
+    const jenis  = getVal('tr-type');
+    const amount = getVal('tr-amount');
+    const note   = getVal('tr-note');
+
+    if (!jenis || !amount) { showToast('Lengkapi jenis dan jumlah transaksi.', true); return; }
+
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true; btn.textContent = 'Menyimpan...';
+
+    const { error } = await db.from('transactions').insert([{
+      member: currentUser.username,
+      char: currentUser.character_name,
+      jenis,
+      amount: Number(amount),
+      note: note || '-'
+    }]);
+
+    btn.disabled = false; btn.textContent = '✦ Catat Transaksi';
+
+    if (error) { showToast('Gagal menyimpan transaksi.', true); return; }
+
+    document.getElementById('tr-type').value = '';
+    document.getElementById('tr-amount').value = '';
+    document.getElementById('tr-note').value = '';
+    showToast('Transaksi berhasil dicatat.');
+    fetchLogs();
+  }
+
+  // ── DELETE (Observer only) ──
+  async function deleteLog(id) {
+    if (!currentUser || currentUser.role !== 'observer') return;
+    const { error } = await db.from('transactions').delete().eq('id', id);
+    if (error) { showToast('Gagal menghapus.', true); return; }
+    showToast('Entri dihapus.');
+    fetchLogs();
+  }
+
+  // ── RENDER ──
+  function renderLog() {
+    const search = getVal('filter-search').toLowerCase();
+    const tf = getVal('filter-type');
+    const isObserver = currentUser?.role === 'observer';
+
+    const filtered = logs.filter(l =>
+      (!tf || l.jenis === tf) &&
+      (!search || l.member.toLowerCase().includes(search) || l.char.toLowerCase().includes(search))
+    );
+
+    const totalIn = logs.filter(l => isIn(l.jenis)).reduce((s,l) => s + l.amount, 0);
+    document.getElementById('s-total').textContent = logs.length;
+    document.getElementById('s-in').textContent    = logs.filter(l => isIn(l.jenis)).length;
+    document.getElementById('s-out').textContent   = logs.filter(l => isOut(l.jenis)).length;
+    document.getElementById('s-vela').textContent  = totalIn.toLocaleString('id');
+    document.getElementById('log-count-label').textContent = filtered.length + ' entri';
+
+    const c = document.getElementById('log-list');
+    if (!filtered.length) {
+      c.innerHTML = `<div class="empty-state"><div class="empty-icon">💰</div><p>Belum ada transaksi tercatat</p></div>`;
+      return;
+    }
+
+    c.innerHTML = filtered.map(l => {
+      const d = new Date(l.created_at);
+      const ds = d.toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'});
+      const ts = d.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+      return `
+        <div class="log-entry">
+          <div class="log-icon ${iconClass(l.jenis)}">${iconChar(l.jenis)}</div>
+          <div>
+            <div class="log-top">
+              <span class="log-name">${l.member}</span>
+              <span class="log-char">${l.char}</span>
+              <span class="log-badge ${badgeClass(l.jenis)}">${l.jenis}</span>
+            </div>
+            <div class="log-amount ${amtClass(l.jenis)}">${Number(l.amount).toLocaleString('id')} Vela</div>
+            ${l.note && l.note !== '-' ? `<div class="log-note">${l.note}</div>` : ''}
+            <div class="log-time">${ds} · ${ts}</div>
+          </div>
+          <div class="log-right">
+            ${isObserver ? `<button class="btn-danger" onclick="deleteLog(${l.id})">Hapus</button>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── REALTIME ──
+  db.channel('transactions')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+      if (currentUser) fetchLogs();
+    })
+    .subscribe();
+
+  // ── TOAST ──
+  function showToast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast' + (isError ? ' error' : '');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ── ENTER KEY ──
+  ['login-username','login-password'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+  });
+</script>
+</body>
+</html>
